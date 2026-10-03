@@ -1,7 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Pressable, ScrollView, Switch, Text, View } from '@ng-native/components';
-import { NativeHeader } from '@ng-native/router';
+import { NativeHeader, TabSafeAreaView } from '@ng-native/router';
 import { ChaosService, ServerChaosType } from '../chaos/chaos.service';
 import { ReportsRepository } from '../data/reports.repo';
 import { SyncService } from '../sync/sync.service';
@@ -21,147 +21,149 @@ const DEAD_SERVER_URL = 'http://localhost:9';
 
 @Component({
   selector: 'app-lab',
-  imports: [CommonModule, NativeHeader, OfflineStrip, Pressable, ScrollView, Switch, Text, View],
+  imports: [CommonModule, NativeHeader, OfflineStrip, Pressable, ScrollView, Switch, TabSafeAreaView, Text, View],
   template: `
     <native-header title="Diagnostics" />
 
     <app-offline-strip />
 
     <view class="container">
-      <scroll-view class="lab-scroll">
-        <view class="card">
-          <text class="card-title">Network conditions</text>
+      <tab-safe-area-view [edges]="['bottom']" class="tab-body">
+        <scroll-view class="lab-scroll">
+          <view class="card">
+            <text class="card-title">Network conditions</text>
 
-          <view class="control-row control-row-switch">
-            <text class="label">Simulate offline</text>
-            <switch
-              [checked]="chaos.offline()"
-              (checkedChange)="chaos.setOffline($event)"
-              accessibilityLabel="Simulate offline"
-            />
-          </view>
+            <view class="control-row control-row-switch">
+              <text class="label">Simulate offline</text>
+              <switch
+                [checked]="chaos.offline()"
+                (checkedChange)="chaos.setOffline($event)"
+                accessibilityLabel="Simulate offline"
+              />
+            </view>
 
-          <view class="control-row">
-            <text class="label">Extra latency: {{ chaos.latencyMs() }}ms</text>
-            <view class="pill-group">
-              <pressable
-                [class]="'pill ' + (chaos.latencyMs() === 0 ? 'pill-active' : '')"
-                (press)="chaos.setLatency(0)"
-              >
-                <text class="pill-text">None</text>
-              </pressable>
-              <pressable
-                [class]="'pill ' + (chaos.latencyMs() === 1000 ? 'pill-active' : '')"
-                (press)="chaos.setLatency(1000)"
-              >
-                <text class="pill-text">1s</text>
-              </pressable>
-              <pressable
-                [class]="'pill ' + (chaos.latencyMs() === 5000 ? 'pill-active' : '')"
-                (press)="chaos.setLatency(5000)"
-              >
-                <text class="pill-text">5s</text>
-              </pressable>
+            <view class="control-row">
+              <text class="label">Extra latency: {{ chaos.latencyMs() }}ms</text>
+              <view class="pill-group">
+                <pressable
+                  [class]="'pill ' + (chaos.latencyMs() === 0 ? 'pill-active' : '')"
+                  (press)="chaos.setLatency(0)"
+                >
+                  <text class="pill-text">None</text>
+                </pressable>
+                <pressable
+                  [class]="'pill ' + (chaos.latencyMs() === 1000 ? 'pill-active' : '')"
+                  (press)="chaos.setLatency(1000)"
+                >
+                  <text class="pill-text">1s</text>
+                </pressable>
+                <pressable
+                  [class]="'pill ' + (chaos.latencyMs() === 5000 ? 'pill-active' : '')"
+                  (press)="chaos.setLatency(5000)"
+                >
+                  <text class="pill-text">5s</text>
+                </pressable>
+              </view>
+            </view>
+
+            <view class="control-row">
+              <text class="label">Drop the next requests: {{ chaos.failNext() }}</text>
+              <view class="pill-group">
+                <pressable
+                  [class]="'pill ' + (chaos.failNext() === 0 ? 'pill-active' : '')"
+                  (press)="chaos.setFailNext(0)"
+                >
+                  <text class="pill-text">None</text>
+                </pressable>
+                <pressable
+                  [class]="'pill ' + (chaos.failNext() === 3 ? 'pill-active' : '')"
+                  (press)="chaos.setFailNext(3)"
+                >
+                  <text class="pill-text">3</text>
+                </pressable>
+                <pressable
+                  [class]="'pill ' + (chaos.failNext() === 8 ? 'pill-active' : '')"
+                  (press)="chaos.setFailNext(8)"
+                >
+                  <text class="pill-text">8</text>
+                </pressable>
+              </view>
             </view>
           </view>
 
-          <view class="control-row">
-            <text class="label">Drop the next requests: {{ chaos.failNext() }}</text>
-            <view class="pill-group">
-              <pressable
-                [class]="'pill ' + (chaos.failNext() === 0 ? 'pill-active' : '')"
-                (press)="chaos.setFailNext(0)"
-              >
-                <text class="pill-text">None</text>
-              </pressable>
-              <pressable
-                [class]="'pill ' + (chaos.failNext() === 3 ? 'pill-active' : '')"
-                (press)="chaos.setFailNext(3)"
-              >
-                <text class="pill-text">3</text>
-              </pressable>
-              <pressable
-                [class]="'pill ' + (chaos.failNext() === 8 ? 'pill-active' : '')"
-                (press)="chaos.setFailNext(8)"
-              >
-                <text class="pill-text">8</text>
-              </pressable>
-            </view>
-          </view>
-        </view>
+          <view class="card">
+            <text class="card-title">Server responses</text>
 
-        <view class="card">
-          <text class="card-title">Server responses</text>
-
-          <view class="chaos-options">
-            @for (mode of serverModes; track mode.id) {
-              <pressable
-                [class]="'chaos-opt ' + (chaos.serverChaos() === mode.id ? 'opt-active' : '')"
-                (press)="chaos.setServerChaos(mode.id)"
-              >
-                <text class="opt-title">{{ mode.label }}</text>
-                <text class="opt-desc">{{ mode.desc }}</text>
-              </pressable>
-            }
-          </view>
-        </view>
-
-        <view class="card">
-          <text class="card-title">Resilience checks</text>
-          <text class="card-body">
-            Twelve checks covering offline capture, retries, backoff and server faults. Server
-            checks are skipped when the local server is not running.
-          </text>
-
-          <pressable
-            class="btn-run"
-            (press)="runSuite()"
-            [disabled]="suiteRunning()"
-            accessibilityRole="button"
-          >
-            <text class="btn-run-text">
-              {{ suiteRunning() ? 'Running checks...' : 'Run 12 checks' }}
-            </text>
-          </pressable>
-
-          @if (experimentLog().length > 0) {
-            <view class="log-box">
-              @for (log of experimentLog(); track log) {
-                <text class="log-line">{{ log }}</text>
+            <view class="chaos-options">
+              @for (mode of serverModes; track mode.id) {
+                <pressable
+                  [class]="'chaos-opt ' + (chaos.serverChaos() === mode.id ? 'opt-active' : '')"
+                  (press)="chaos.setServerChaos(mode.id)"
+                >
+                  <text class="opt-title">{{ mode.label }}</text>
+                  <text class="opt-desc">{{ mode.desc }}</text>
+                </pressable>
               }
             </view>
-          }
-        </view>
-
-        <view class="card">
-          <text class="card-title">Test data</text>
-          <text class="card-body">Fill the list with rows to test scrolling, or start over.</text>
-          <view class="data-row">
-            <pressable
-              class="btn-outline"
-              (press)="seedDatabase(500)"
-              accessibilityRole="button"
-            >
-              <text class="btn-outline-text">Seed 500 rows</text>
-            </pressable>
-            <pressable
-              class="btn-outline btn-outline-danger"
-              (press)="repo.clearAll()"
-              accessibilityRole="button"
-            >
-              <text class="btn-outline-text">Delete all data</text>
-            </pressable>
           </view>
-        </view>
 
-        <pressable
-          class="btn-reset"
-          (press)="chaos.reset(); experimentLog.set([])"
-          accessibilityRole="button"
-        >
-          <text class="reset-text">Reset all conditions</text>
-        </pressable>
-      </scroll-view>
+          <view class="card">
+            <text class="card-title">Resilience checks</text>
+            <text class="card-body">
+              Twelve checks covering offline capture, retries, backoff and server faults. Server
+              checks are skipped when the local server is not running.
+            </text>
+
+            <pressable
+              class="btn-run"
+              (press)="runSuite()"
+              [disabled]="suiteRunning()"
+              accessibilityRole="button"
+            >
+              <text class="btn-run-text">
+                {{ suiteRunning() ? 'Running checks...' : 'Run 12 checks' }}
+              </text>
+            </pressable>
+
+            @if (experimentLog().length > 0) {
+              <view class="log-box">
+                @for (log of experimentLog(); track log) {
+                  <text class="log-line">{{ log }}</text>
+                }
+              </view>
+            }
+          </view>
+
+          <view class="card">
+            <text class="card-title">Test data</text>
+            <text class="card-body">Fill the list with rows to test scrolling, or start over.</text>
+            <view class="data-row">
+              <pressable
+                class="btn-outline"
+                (press)="seedDatabase(500)"
+                accessibilityRole="button"
+              >
+                <text class="btn-outline-text">Seed 500 rows</text>
+              </pressable>
+              <pressable
+                class="btn-outline btn-outline-danger"
+                (press)="repo.clearAll()"
+                accessibilityRole="button"
+              >
+                <text class="btn-outline-text">Delete all data</text>
+              </pressable>
+            </view>
+          </view>
+
+          <pressable
+            class="btn-reset"
+            (press)="chaos.reset(); experimentLog.set([])"
+            accessibilityRole="button"
+          >
+            <text class="reset-text">Reset all conditions</text>
+          </pressable>
+        </scroll-view>
+      </tab-safe-area-view>
     </view>
   `,
   styles: `
@@ -172,6 +174,9 @@ const DEAD_SERVER_URL = 'http://localhost:9';
       flex: 1;
       background-color: #f6f6f7;
       padding: 16px;
+    }
+    .tab-body {
+      flex: 1;
     }
     .lab-scroll {
       flex: 1;

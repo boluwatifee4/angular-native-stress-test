@@ -10,6 +10,7 @@ async function renderApp() {
     providers: [provideNativeRouter(routes, ...routerFeatures())],
   });
   return {
+    fabric: result.fabric,
     router: result.componentRef.injector.get(Router),
     nav: result.componentRef.injector.get(NativeNavigation),
   };
@@ -103,5 +104,24 @@ describe('App', () => {
       expect(screen.getByRole('switch', { name: 'Simulate offline' }).props['value']).toBe(true)
     );
     expect(screen.getAllByText(strip).length).toBeGreaterThan(0);
+  });
+
+  it('lifts every tab screen clear of the tab bar', async () => {
+    const { fabric, router } = await renderApp();
+
+    await screen.findByText('No inspections yet');
+    await router.navigate(['/tabs/diagnostics']);
+    await screen.findByText('Run 12 checks');
+    await router.navigate(['/tabs/queue']);
+
+    const lifted = fabric.find('RNSSafeAreaView');
+
+    expect(lifted).toBeDefined();
+    expect(lifted?.props['edges']).toEqual({
+      top: false,
+      right: false,
+      bottom: true,
+      left: false,
+    });
   });
 });

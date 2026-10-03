@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Pressable, ScrollView, Text, View } from '@ng-native/components';
-import { NativeHeader } from '@ng-native/router';
+import { NativeHeader, TabSafeAreaView } from '@ng-native/router';
 import { ReportsRepository } from '../data/reports.repo';
 import { SyncService } from '../sync/sync.service';
 import { ChaosService } from '../chaos/chaos.service';
@@ -10,86 +10,88 @@ import { OfflineStrip } from './offline-strip';
 
 @Component({
   selector: 'app-queue',
-  imports: [CommonModule, NativeHeader, OfflineStrip, Pressable, ScrollView, Text, View],
+  imports: [CommonModule, NativeHeader, OfflineStrip, Pressable, ScrollView, TabSafeAreaView, Text, View],
   template: `
     <native-header title="Queue" />
 
     <app-offline-strip />
 
     <view class="container">
-      <view class="stats-card">
-        <view class="stat">
-          <text class="stat-num stat-queued">{{ repo.statusCounts()['queued'] }}</text>
-          <text class="stat-label">Queued</text>
+      <tab-safe-area-view [edges]="['bottom']" class="tab-body">
+        <view class="stats-card">
+          <view class="stat">
+            <text class="stat-num stat-queued">{{ repo.statusCounts()['queued'] }}</text>
+            <text class="stat-label">Queued</text>
+          </view>
+          <view class="stat">
+            <text class="stat-num stat-sending">{{ repo.statusCounts()['syncing'] }}</text>
+            <text class="stat-label">Sending</text>
+          </view>
+          <view class="stat">
+            <text class="stat-num stat-sent">{{ repo.statusCounts()['synced'] }}</text>
+            <text class="stat-label">Sent</text>
+          </view>
+          <view class="stat">
+            <text class="stat-num stat-failed">{{ repo.statusCounts()['failed'] }}</text>
+            <text class="stat-label">Failed</text>
+          </view>
         </view>
-        <view class="stat">
-          <text class="stat-num stat-sending">{{ repo.statusCounts()['syncing'] }}</text>
-          <text class="stat-label">Sending</text>
+
+        <view class="controls-card">
+          <pressable
+            class="btn btn-secondary"
+            (press)="chaos.setPauseSync(!chaos.pauseSync())"
+            accessibilityRole="button"
+          >
+            <text class="btn-secondary-text">
+              {{ chaos.pauseSync() ? 'Resume syncing' : 'Pause syncing' }}
+            </text>
+          </pressable>
+
+          <pressable class="btn btn-primary" (press)="sync.drain()" accessibilityRole="button">
+            <text class="btn-primary-text">Sync now</text>
+          </pressable>
         </view>
-        <view class="stat">
-          <text class="stat-num stat-sent">{{ repo.statusCounts()['synced'] }}</text>
-          <text class="stat-label">Sent</text>
-        </view>
-        <view class="stat">
-          <text class="stat-num stat-failed">{{ repo.statusCounts()['failed'] }}</text>
-          <text class="stat-label">Failed</text>
-        </view>
-      </view>
 
-      <view class="controls-card">
-        <pressable
-          class="btn btn-secondary"
-          (press)="chaos.setPauseSync(!chaos.pauseSync())"
-          accessibilityRole="button"
-        >
-          <text class="btn-secondary-text">
-            {{ chaos.pauseSync() ? 'Resume syncing' : 'Pause syncing' }}
-          </text>
-        </pressable>
+        <view class="queue-section">
+          <text class="section-title">Waiting</text>
 
-        <pressable class="btn btn-primary" (press)="sync.drain()" accessibilityRole="button">
-          <text class="btn-primary-text">Sync now</text>
-        </pressable>
-      </view>
+          <scroll-view class="queue-scroll">
+            @for (item of waiting(); track item.id) {
+              <view class="item-row">
+                <view class="item-left">
+                  <text class="item-note" [numberOfLines]="2">{{ item.note }}</text>
+                  @if (item.attempts > 0) {
+                    <text class="item-attempts">Attempt {{ item.attempts }} of 8</text>
+                  }
+                  @if (item.error) {
+                    <text class="item-error" [numberOfLines]="1">{{ item.error }}</text>
+                  }
+                </view>
 
-      <view class="queue-section">
-        <text class="section-title">Waiting</text>
+                <view class="item-right">
+                  <text [class]="'badge badge-' + item.status">{{ label(item.status) }}</text>
 
-        <scroll-view class="queue-scroll">
-          @for (item of waiting(); track item.id) {
-            <view class="item-row">
-              <view class="item-left">
-                <text class="item-note" [numberOfLines]="2">{{ item.note }}</text>
-                @if (item.attempts > 0) {
-                  <text class="item-attempts">Attempt {{ item.attempts }} of 8</text>
-                }
-                @if (item.error) {
-                  <text class="item-error" [numberOfLines]="1">{{ item.error }}</text>
-                }
+                  @if (item.status === 'failed') {
+                    <pressable
+                      class="btn-retry"
+                      (press)="sync.retryFailedReport(item.id)"
+                      accessibilityRole="button"
+                    >
+                      <text class="retry-text">Retry</text>
+                    </pressable>
+                  }
+                </view>
               </view>
-
-              <view class="item-right">
-                <text [class]="'badge badge-' + item.status">{{ label(item.status) }}</text>
-
-                @if (item.status === 'failed') {
-                  <pressable
-                    class="btn-retry"
-                    (press)="sync.retryFailedReport(item.id)"
-                    accessibilityRole="button"
-                  >
-                    <text class="retry-text">Retry</text>
-                  </pressable>
-                }
+            } @empty {
+              <view class="empty-row">
+                <text class="empty-title">Nothing waiting</text>
+                <text class="empty-text">Everything you have recorded has been sent.</text>
               </view>
-            </view>
-          } @empty {
-            <view class="empty-row">
-              <text class="empty-title">Nothing waiting</text>
-              <text class="empty-text">Everything you have recorded has been sent.</text>
-            </view>
-          }
-        </scroll-view>
-      </view>
+            }
+          </scroll-view>
+        </view>
+      </tab-safe-area-view>
     </view>
   `,
   styles: `
@@ -100,6 +102,9 @@ import { OfflineStrip } from './offline-strip';
       flex: 1;
       background-color: #f6f6f7;
       padding: 16px;
+    }
+    .tab-body {
+      flex: 1;
     }
     .stats-card {
       flex-direction: row;

@@ -1,7 +1,7 @@
 import { Component, Input, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Image, Pressable, ScrollView, Text, TextInput, View } from '@ng-native/components';
-import { NativeHeader } from '@ng-native/router';
+import { NativeHeader, TabSafeAreaView } from '@ng-native/router';
 import { ReportsRepository } from '../data/reports.repo';
 import { SyncService } from '../sync/sync.service';
 import { InspectionReport } from '../data/models';
@@ -10,110 +10,112 @@ import { OfflineStrip } from './offline-strip';
 
 @Component({
   selector: 'app-detail',
-  imports: [CommonModule, Image, NativeHeader, OfflineStrip, Pressable, ScrollView, Text, TextInput, View],
+  imports: [CommonModule, Image, NativeHeader, OfflineStrip, Pressable, ScrollView, TabSafeAreaView, Text, TextInput, View],
   template: `
     <native-header title="Inspection" />
 
     <app-offline-strip />
 
     <view class="container">
-      @if (report()) {
-        <scroll-view class="detail-scroll">
-          <view class="card">
-            <view class="card-row">
-              <text [class]="'badge badge-' + report()?.status">
-                {{ label(report()?.status) }}
-              </text>
-              <text class="date-text">{{ report()?.created_at | date: 'MMM d, y, HH:mm' }}</text>
+      <tab-safe-area-view [edges]="['bottom']" class="tab-body">
+        @if (report()) {
+          <scroll-view class="detail-scroll">
+            <view class="card">
+              <view class="card-row">
+                <text [class]="'badge badge-' + report()?.status">
+                  {{ label(report()?.status) }}
+                </text>
+                <text class="date-text">{{ report()?.created_at | date: 'MMM d, y, HH:mm' }}</text>
+              </view>
+
+              <text class="label">Note</text>
+              <text class="val-note">{{ report()?.note }}</text>
+
+              @if (report()?.photo_path) {
+                <text class="label">Photo</text>
+                <image
+                  class="photo"
+                  [source]="photoSrc()"
+                  resizeMode="cover"
+                />
+              }
+
+              <text class="ref-text">Ref {{ report()?.id?.slice(0, 8) }}</text>
             </view>
 
-            <text class="label">Note</text>
-            <text class="val-note">{{ report()?.note }}</text>
-
-            @if (report()?.photo_path) {
-              <text class="label">Photo</text>
-              <image
-                class="photo"
-                [source]="photoSrc()"
-                resizeMode="cover"
-              />
+            @if (report()?.error) {
+              <view class="error-box">
+                <text class="error-title">Could not send this report</text>
+                <text class="error-text">{{ report()?.error }}</text>
+                <pressable
+                  class="btn-retry"
+                  (press)="retrySync()"
+                  accessibilityRole="button"
+                  accessibilityLabel="Try sending again"
+                >
+                  <text class="retry-text">Try again</text>
+                </pressable>
+              </view>
             }
 
-            <text class="ref-text">Ref {{ report()?.id?.slice(0, 8) }}</text>
+            @if (report()?.report_json) {
+              <view class="card report-card">
+                <view class="report-head">
+                  <text class="card-title">Report</text>
+                  <text class="chip-auto">Auto-generated</text>
+                </view>
+
+                <text class="label">Title</text>
+                <text-input
+                  class="edit-input"
+                  [value]="editTitle()"
+                  (changeText)="editTitle.set($event)"
+                />
+
+                <view class="meta-row">
+                  <view class="meta-item">
+                    <text class="meta-label">Severity</text>
+                    <text class="meta-val">{{ report()?.report_json?.severity | titlecase }}</text>
+                  </view>
+                  <view class="meta-item">
+                    <text class="meta-label">Category</text>
+                    <text class="meta-val">{{ report()?.report_json?.category | titlecase }}</text>
+                  </view>
+                </view>
+
+                <text class="label">Summary</text>
+                <text-input
+                  class="edit-input-multiline"
+                  [value]="editSummary()"
+                  (changeText)="editSummary.set($event)"
+                  [multiline]="true"
+                  [numberOfLines]="3"
+                />
+
+                <text class="label">Recommended action</text>
+                <text class="val-action">{{ report()?.report_json?.suggested_action }}</text>
+
+                <pressable
+                  class="btn-save"
+                  (press)="saveEdits()"
+                  accessibilityRole="button"
+                  accessibilityLabel="Save changes"
+                >
+                  <text class="btn-save-text">Save changes</text>
+                </pressable>
+
+                @if (savedNotice()) {
+                  <text class="saved-text">Saved on this device</text>
+                }
+              </view>
+            }
+          </scroll-view>
+        } @else {
+          <view class="not-found">
+            <text class="not-found-text">This report is no longer available.</text>
           </view>
-
-          @if (report()?.error) {
-            <view class="error-box">
-              <text class="error-title">Could not send this report</text>
-              <text class="error-text">{{ report()?.error }}</text>
-              <pressable
-                class="btn-retry"
-                (press)="retrySync()"
-                accessibilityRole="button"
-                accessibilityLabel="Try sending again"
-              >
-                <text class="retry-text">Try again</text>
-              </pressable>
-            </view>
-          }
-
-          @if (report()?.report_json) {
-            <view class="card report-card">
-              <view class="report-head">
-                <text class="card-title">Report</text>
-                <text class="chip-auto">Auto-generated</text>
-              </view>
-
-              <text class="label">Title</text>
-              <text-input
-                class="edit-input"
-                [value]="editTitle()"
-                (changeText)="editTitle.set($event)"
-              />
-
-              <view class="meta-row">
-                <view class="meta-item">
-                  <text class="meta-label">Severity</text>
-                  <text class="meta-val">{{ report()?.report_json?.severity | titlecase }}</text>
-                </view>
-                <view class="meta-item">
-                  <text class="meta-label">Category</text>
-                  <text class="meta-val">{{ report()?.report_json?.category | titlecase }}</text>
-                </view>
-              </view>
-
-              <text class="label">Summary</text>
-              <text-input
-                class="edit-input-multiline"
-                [value]="editSummary()"
-                (changeText)="editSummary.set($event)"
-                [multiline]="true"
-                [numberOfLines]="3"
-              />
-
-              <text class="label">Recommended action</text>
-              <text class="val-action">{{ report()?.report_json?.suggested_action }}</text>
-
-              <pressable
-                class="btn-save"
-                (press)="saveEdits()"
-                accessibilityRole="button"
-                accessibilityLabel="Save changes"
-              >
-                <text class="btn-save-text">Save changes</text>
-              </pressable>
-
-              @if (savedNotice()) {
-                <text class="saved-text">Saved on this device</text>
-              }
-            </view>
-          }
-        </scroll-view>
-      } @else {
-        <view class="not-found">
-          <text class="not-found-text">This report is no longer available.</text>
-        </view>
-      }
+        }
+      </tab-safe-area-view>
     </view>
   `,
   styles: `
@@ -124,6 +126,9 @@ import { OfflineStrip } from './offline-strip';
       flex: 1;
       background-color: #f6f6f7;
       padding: 16px;
+    }
+    .tab-body {
+      flex: 1;
     }
 
     .detail-scroll {
