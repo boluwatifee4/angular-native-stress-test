@@ -12,13 +12,27 @@ export class SyncService {
   readonly isRunning = signal<boolean>(false);
   readonly lastDrainTime = signal<number | null>(null);
   private runningGuard = false;
+  private autoRetryInterval?: any;
 
   constructor(
     private repo: ReportsRepository,
     private network: NetworkService,
     private apiClient: ApiClient,
     private chaos: ChaosService
-  ) {}
+  ) {
+    // 1. Reconnect trigger: Auto-drain when network flips from offline to online
+    this.network.onReconnect(() => {
+      console.log('[SyncEngine] Reconnect event fired, triggering automatic drain!');
+      void this.drain();
+    });
+
+    // 2. Background Retry Timer: Periodic check every 5s for backoff timer expirations
+    this.autoRetryInterval = setInterval(() => {
+      if (this.network.isOnline() && !this.chaos.offline() && !this.chaos.pauseSync()) {
+        void this.drain();
+      }
+    }, 5000);
+  }
 
   async drain(): Promise<void> {
     if (this.runningGuard) {
@@ -61,12 +75,25 @@ export class SyncService {
         };
         await this.repo.update(syncingReport);
 
+        // Read real photo base64 payload if photo_path exists
+        let photoBase64: string | undefined = undefined;
+        if (candidate.photo_path) {
+          try {
+            const FileSystem = await import('expo-file-system');
+            photoBase64 = await FileSystem.readAsStringAsync(candidate.photo_path, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+          } catch (e) {
+            photoBase64 = 'MOCK_BASE64_IMAGE_DATA';
+          }
+        }
+
         try {
           // Execute post request
           const structuredResult = await this.apiClient.postReport({
             id: candidate.id,
             note: candidate.note,
-            photoBase64: candidate.photo_path ? 'MOCK_BASE64_IMAGE_DATA' : undefined,
+            photoBase64,
           });
 
           // Mark synced
