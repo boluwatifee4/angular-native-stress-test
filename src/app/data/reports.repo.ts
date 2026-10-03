@@ -138,6 +138,16 @@ export class ReportsRepository implements IReportRepository {
     return counts;
   }
 
+  async clearAll(): Promise<void> {
+    if (this.isNativeDb) {
+      const db = await this.dbService.getDatabase();
+      await db.runAsync('DELETE FROM reports');
+    } else {
+      this.inMemoryMap.clear();
+    }
+    await this.refreshSignal();
+  }
+
   private async refreshSignal(): Promise<void> {
     const current = await this.list(0, 1000);
     this.reports.set(current);

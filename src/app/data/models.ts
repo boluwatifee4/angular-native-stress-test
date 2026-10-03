@@ -29,4 +29,5 @@ export interface IReportRepository {
   getAll(): Promise<InspectionReport[]>;
   countByStatus(): Promise<Record<ReportStatus, number>>;
   recoverStaleSyncingState(): Promise<number>; // UPDATE status='queued' WHERE status='syncing'
+  clearAll(): Promise<void>;
 }

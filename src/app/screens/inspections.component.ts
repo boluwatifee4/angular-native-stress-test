@@ -20,7 +20,10 @@ import { InspectionReport, ReportStatus } from '../data/models';
             <text class="btn-text">+ New Capture</text>
           </pressable>
           <pressable class="btn-secondary" (press)="seedDatabase(500)">
-            <text class="btn-secondary-text">Seed 500 Rows</text>
+            <text class="btn-secondary-text">Seed 500</text>
+          </pressable>
+          <pressable class="btn-danger" (press)="repo.clearAll()">
+            <text class="btn-danger-text">Reset DB</text>
           </pressable>
         </view>
       </view>
@@ -114,6 +117,17 @@ import { InspectionReport, ReportStatus } from '../data/models';
     .btn-secondary-text {
       color: #1f2937;
       font-weight: 600;
+      font-size: 14px;
+    }
+    .btn-danger {
+      background-color: #fee2e2;
+      padding: 12px 14px;
+      border-radius: 8px;
+      align-items: center;
+    }
+    .btn-danger-text {
+      color: #991b1b;
+      font-weight: 700;
       font-size: 14px;
     }
     .list-scroll {
