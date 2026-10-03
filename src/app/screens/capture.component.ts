@@ -4,7 +4,6 @@ import { Pressable, ScrollView, Text, TextInput, View } from '@ng-native/compone
 import { ReportsRepository } from '../data/reports.repo';
 import { SyncService } from '../sync/sync.service';
 import { InspectionReport } from '../data/models';
-import * as ImagePicker from 'expo-image-picker';
 
 @Component({
   selector: 'app-capture',
@@ -154,6 +153,7 @@ export class CaptureComponent {
 
   async pickImage() {
     try {
+      const ImagePicker = await import('expo-image-picker');
       const res = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         quality: 0.7,
@@ -169,6 +169,7 @@ export class CaptureComponent {
 
   async takePhoto() {
     try {
+      const ImagePicker = await import('expo-image-picker');
       const res = await ImagePicker.launchCameraAsync({
         quality: 0.7,
       });

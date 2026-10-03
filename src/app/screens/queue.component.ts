@@ -1,4 +1,4 @@
-import { Component, signal, useEffect } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Pressable, ScrollView, Text, View } from '@ng-native/components';
 import { ReportsRepository } from '../data/reports.repo';

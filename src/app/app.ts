@@ -1,7 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Pressable, SafeAreaProvider, SafeAreaView, Text, View } from '@ng-native/components';
-import { StatusBar } from '@ng-native/device';
 import { DatabaseService } from './data/db.service';
 import { ReportsRepository } from './data/reports.repo';
 import { SyncService } from './sync/sync.service';
@@ -191,14 +190,18 @@ export class App {
   constructor(
     public repo: ReportsRepository,
     public sync: SyncService,
-    public chaos: ChaosService,
-    private dbService: DatabaseService
+    public chaos: ChaosService
   ) {
-    inject(StatusBar).set({ style: 'auto' });
     this.initApp();
   }
 
   async initApp() {
+    try {
+      const { StatusBar } = await import('@ng-native/device');
+      inject(StatusBar).set({ style: 'auto' });
+    } catch (e) {
+      // Device StatusBar not available in Node test runner
+    }
     await this.repo.init();
     await this.sync.drain();
   }
