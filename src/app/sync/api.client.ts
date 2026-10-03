@@ -8,11 +8,13 @@ export interface ReportPayload {
   photoBase64?: string | null;
 }
 
+export const DEFAULT_SERVER_URL = 'http://localhost:8787/reports';
+
 @Injectable({
   providedIn: 'root',
 })
 export class ApiClient {
-  private serverUrl = 'http://localhost:8787/reports';
+  private serverUrl = DEFAULT_SERVER_URL;
 
   constructor(private chaos: ChaosService) {}
 
@@ -23,7 +25,7 @@ export class ApiClient {
   async postReport(payload: ReportPayload, timeoutMs = 20000): Promise<StructuredReport> {
     // 1. Check artificial client offline state
     if (this.chaos.offline()) {
-      throw new Error('Network error: Client forced offline by Chaos Lab');
+      throw new Error('Network error: syncing is turned off from Diagnostics');
     }
 
     // 2. Apply artificial latency
@@ -36,7 +38,7 @@ export class ApiClient {
     const remainingFails = this.chaos.failNext();
     if (remainingFails > 0) {
       this.chaos.setFailNext(remainingFails - 1);
-      throw new Error('Simulated network connection drop by Chaos Lab');
+      throw new Error('Simulated network connection drop (Diagnostics)');
     }
 
     // 4. Prepare request headers & server chaos header

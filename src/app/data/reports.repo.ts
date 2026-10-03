@@ -7,8 +7,17 @@ import { DatabaseService, RECOVER_STALE_SYNCING_SQL } from './db.service';
 })
 export class ReportsRepository implements IReportRepository {
   readonly reports = signal<InspectionReport[]>([]);
+  readonly total = signal<number>(0);
+  readonly statusCounts = signal<Record<ReportStatus, number>>({
+    draft: 0,
+    queued: 0,
+    syncing: 0,
+    synced: 0,
+    failed: 0,
+  });
   private inMemoryMap = new Map<string, InspectionReport>();
   private isNativeDb = false;
+  private loadingMore = false;
 
   constructor(private dbService: DatabaseService) {}
 
@@ -89,6 +98,16 @@ export class ReportsRepository implements IReportRepository {
     await this.refreshSignal();
   }
 
+  async delete(id: string): Promise<void> {
+    if (this.isNativeDb) {
+      const db = await this.dbService.getDatabase();
+      await db.runAsync('DELETE FROM reports WHERE id = ?', [id]);
+    } else {
+      this.inMemoryMap.delete(id);
+    }
+    await this.refreshSignal();
+  }
+
   async getById(id: string): Promise<InspectionReport | null> {
     if (this.isNativeDb) {
       const db = await this.dbService.getDatabase();
@@ -129,13 +148,46 @@ export class ReportsRepository implements IReportRepository {
       failed: 0,
     };
 
-    const all = await this.getAll();
-    for (const r of all) {
-      if (counts[r.status] !== undefined) {
-        counts[r.status]++;
+    if (this.isNativeDb) {
+      const db = await this.dbService.getDatabase();
+      const rows = await db.getAllAsync('SELECT status, COUNT(*) as cnt FROM reports GROUP BY status');
+      for (const row of rows as any[]) {
+        const st = row.status as ReportStatus;
+        if (counts[st] !== undefined) {
+          counts[st] = Number(row.cnt);
+        }
+      }
+    } else {
+      for (const r of this.inMemoryMap.values()) {
+        if (counts[r.status] !== undefined) {
+          counts[r.status]++;
+        }
       }
     }
     return counts;
+  }
+
+  async getNextQueuedReport(now: number): Promise<InspectionReport | null> {
+    if (this.isNativeDb) {
+      const db = await this.dbService.getDatabase();
+      const row = await db.getFirstAsync(
+        `SELECT * FROM reports 
+         WHERE status = 'queued' AND (next_retry IS NULL OR next_retry <= ?) 
+         ORDER BY created_at ASC LIMIT 1`,
+        [now]
+      );
+      if (!row) return null;
+      return this.mapRowToReport(row);
+    } else {
+      const queued = Array.from(this.inMemoryMap.values())
+        .filter(
+          (r) =>
+            r.status === 'queued' &&
+            (r.next_retry === null || r.next_retry === undefined || r.next_retry <= now)
+        )
+        .sort((a, b) => a.created_at - b.created_at);
+      return queued[0] || null;
+    }
   }
 
   async clearAll(): Promise<void> {
@@ -148,9 +200,29 @@ export class ReportsRepository implements IReportRepository {
     await this.refreshSignal();
   }
 
+  /** Next page of reports, appended for the list's endReached. */
+  async loadMore(): Promise<void> {
+    if (this.loadingMore) return;
+    const offset = this.reports().length;
+    if (offset >= this.total()) return;
+    this.loadingMore = true;
+    try {
+      const next = await this.list(offset, 50);
+      this.reports.set([...this.reports(), ...next]);
+    } finally {
+      this.loadingMore = false;
+    }
+  }
+
   private async refreshSignal(): Promise<void> {
-    const current = await this.list(0, 1000);
+    const keep = Math.max(50, this.reports().length);
+    const current = await this.list(0, keep);
     this.reports.set(current);
+    const counts = await this.countByStatus();
+    this.statusCounts.set(counts);
+    this.total.set(
+      counts.draft + counts.queued + counts.syncing + counts.synced + counts.failed
+    );
   }
 
   private mapRowToReport(row: any): InspectionReport {

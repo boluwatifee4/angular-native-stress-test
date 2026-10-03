@@ -24,10 +24,12 @@ export interface IReportRepository {
   init(): Promise<void>;
   insert(report: InspectionReport): Promise<void>;
   update(report: InspectionReport): Promise<void>;
+  delete(id: string): Promise<void>;
   getById(id: string): Promise<InspectionReport | null>;
   list(offset?: number, limit?: number): Promise<InspectionReport[]>;
   getAll(): Promise<InspectionReport[]>;
   countByStatus(): Promise<Record<ReportStatus, number>>;
   recoverStaleSyncingState(): Promise<number>; // UPDATE status='queued' WHERE status='syncing'
   clearAll(): Promise<void>;
+  getNextQueuedReport(now: number): Promise<InspectionReport | null>;
 }

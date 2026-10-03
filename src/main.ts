@@ -6,12 +6,15 @@ import { AppRegistry, Image, Platform, processColor } from 'react-native';
 import { mount } from '@ng-native/platform';
 import { currentConditions, deviceTokens, watchConditions } from '@ng-native/device';
 import { getFabricUIManager, registerPlatformComponents } from '@ng-native/fabric';
+import { provideNativeRouter } from '@ng-native/router';
 import { App } from './app/app.ts';
+import { routes, routerFeatures } from './app/app.routes.ts';
 
 registerPlatformComponents(Platform.OS);
 
 AppRegistry.registerRunnable('main', ({ rootTag }: { rootTag: number | string }) => {
   const app = mount(Number(rootTag), App, getFabricUIManager(), {
+    providers: [provideNativeRouter(routes, ...routerFeatures())],
     // Colours, as the integers the platform wants.
     processColor,
     // What `@media` resolves against. Without it every media query is false and a responsive

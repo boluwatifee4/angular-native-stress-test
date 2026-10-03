@@ -47,16 +47,7 @@ export class SyncService {
         }
 
         const now = Date.now();
-        const allReports = await this.repo.getAll();
-
-        // Pick oldest report matching status='queued' and (next_retry is null or next_retry <= now)
-        const candidate = allReports
-          .filter(
-            (r) =>
-              r.status === 'queued' &&
-              (r.next_retry === null || r.next_retry === undefined || r.next_retry <= now)
-          )
-          .sort((a, b) => a.created_at - b.created_at)[0];
+        const candidate = await this.repo.getNextQueuedReport(now);
 
         if (!candidate) {
           // Queue is empty or remaining queued items are waiting for backoff

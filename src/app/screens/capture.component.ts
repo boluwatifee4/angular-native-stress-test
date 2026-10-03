@@ -1,47 +1,70 @@
-import { Component, EventEmitter, Output, signal } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Pressable, ScrollView, Text, TextInput, View } from '@ng-native/components';
+import { Image, Pressable, SafeAreaProvider, SafeAreaView, ScrollView, Text, TextInput, View } from '@ng-native/components';
+import { NativeNavigation } from '@ng-native/router';
 import { ReportsRepository } from '../data/reports.repo';
 import { SyncService } from '../sync/sync.service';
 import { InspectionReport } from '../data/models';
 
 @Component({
   selector: 'app-capture',
-  imports: [CommonModule, Pressable, ScrollView, Text, TextInput, View],
+  imports: [
+    CommonModule,
+    Image,
+    Pressable,
+    SafeAreaProvider,
+    SafeAreaView,
+    ScrollView,
+    Text,
+    TextInput,
+    View,
+  ],
   template: `
-    <view class="container">
+    <safe-area-provider [reportInsets]="false" class="fill">
+      <safe-area-view class="fill" [edges]="['top', 'bottom']">
+        <view class="container">
+          <view class="top-bar">
+            <pressable
+              class="btn-cancel"
+              (press)="cancel()"
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+            >
+              <text class="cancel-text">Cancel</text>
+            </pressable>
+          </view>
+
       <view class="header">
-        <text class="title">New Inspection Capture</text>
-        <text class="subtitle">Record site observation (works fully offline)</text>
+        <text class="title">New inspection</text>
+        <text class="subtitle">Record what you found on site.</text>
       </view>
 
       <scroll-view class="form-scroll">
         <view class="form-card">
-          <text class="label">Inspection Note (Required)</text>
+          <text class="label">What did you find?</text>
           <text-input
             class="input-note"
-            placeholder="Describe site defect, structural observation, or safety issue..."
+            placeholder="Where it is, what you saw, anything unusual..."
             [value]="noteText()"
             (changeText)="noteText.set($event)"
             [multiline]="true"
             [numberOfLines]="4"
           />
 
-          <text class="label">Photo Evidence</text>
+          <text class="label">Photo (optional)</text>
           <view class="photo-box">
             @if (photoUri()) {
-              <text class="photo-status">📷 Photo Attached</text>
-              <text class="photo-uri" [numberOfLines]="1">{{ photoUri() }}</text>
-              <pressable class="btn-remove" (press)="photoUri.set(null)">
-                <text class="btn-remove-text">Remove Photo</text>
+              <image class="photo-thumb" [source]="photoSrc()" resizeMode="cover" />
+              <pressable class="btn-remove" (press)="photoUri.set(null)" accessibilityRole="button">
+                <text class="btn-remove-text">Remove photo</text>
               </pressable>
             } @else {
               <view class="photo-btn-row">
-                <pressable class="btn-photo" (press)="pickImage()">
-                  <text class="btn-photo-text">🖼️ Pick Photo</text>
+                <pressable class="btn-photo" (press)="takePhoto()" accessibilityRole="button">
+                  <text class="btn-photo-text">Take photo</text>
                 </pressable>
-                <pressable class="btn-photo" (press)="takePhoto()">
-                  <text class="btn-photo-text">📸 Take Camera Photo</text>
+                <pressable class="btn-photo" (press)="pickImage()" accessibilityRole="button">
+                  <text class="btn-photo-text">Choose photo</text>
                 </pressable>
               </view>
             }
@@ -51,34 +74,60 @@ import { InspectionReport } from '../data/models';
             <text class="error-msg">{{ errorMessage() }}</text>
           }
 
-          <pressable class="btn-submit" (press)="saveAndSync()">
-            <text class="btn-submit-text">💾 Queue Inspection Report</text>
+          <pressable
+            class="btn-submit"
+            (press)="saveAndSync()"
+            accessibilityRole="button"
+            accessibilityLabel="Save inspection"
+          >
+            <text class="btn-submit-text">Save inspection</text>
           </pressable>
+
+          <text class="helper">
+            Saved on this device first. It sends on its own when you are back online.
+          </text>
         </view>
-      </scroll-view>
-    </view>
+        </scroll-view>
+        </view>
+      </safe-area-view>
+    </safe-area-provider>
   `,
   styles: `
     :host {
       flex: 1;
     }
+    .fill {
+      flex: 1;
+    }
     .container {
       flex: 1;
-      background-color: #f4f5f8;
+      background-color: #f6f6f7;
       padding: 16px;
     }
+    .top-bar {
+      margin-bottom: 8px;
+    }
+    .btn-cancel {
+      padding: 6px 0;
+      align-self: flex-start;
+    }
+    .cancel-text {
+      font-size: 15px;
+      font-weight: 600;
+      color: #5f646d;
+    }
     .header {
-      margin-bottom: 14px;
+      margin-bottom: 16px;
     }
     .title {
-      font-size: 26px;
-      font-weight: 800;
+      font-size: 24px;
+      font-weight: 700;
       color: #111827;
     }
     .subtitle {
       font-size: 14px;
-      color: #6b7280;
-      margin-top: 2px;
+      color: #5f646d;
+      margin-top: 4px;
     }
     .form-scroll {
       flex: 1;
@@ -86,29 +135,30 @@ import { InspectionReport } from '../data/models';
     .form-card {
       background-color: #ffffff;
       padding: 16px;
-      border-radius: 10px;
-      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      border: 1px solid #d8d8dd;
     }
     .label {
       font-size: 14px;
-      font-weight: 700;
+      font-weight: 600;
       color: #374151;
       margin-bottom: 8px;
     }
     .input-note {
       background-color: #f9fafb;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
+      border: 1px solid #71767f;
+      border-radius: 10px;
       padding: 12px;
       font-size: 15px;
       color: #111827;
-      min-height: 100px;
-      margin-bottom: 16px;
+      min-height: 110px;
+      margin-bottom: 18px;
     }
     .photo-box {
-      background-color: #f3f4f6;
+      background-color: #f9fafb;
       padding: 14px;
-      border-radius: 8px;
+      border-radius: 10px;
+      border: 1px dashed #71767f;
       margin-bottom: 16px;
       align-items: center;
     }
@@ -117,39 +167,76 @@ import { InspectionReport } from '../data/models';
       gap: 10px;
     }
     .btn-photo {
-      background-color: #e5e7eb;
-      padding: 10px 14px;
+      background-color: #ffffff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid #71767f;
+    }
+    .btn-photo-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+    }
+    .photo-thumb {
+      width: 160px;
+      height: 120px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .btn-remove {
+      padding: 6px 10px;
+      background-color: #f3f4f6;
       border-radius: 6px;
     }
-    .btn-photo-text { font-size: 13px; font-weight: 600; color: #1f2937; }
-
-    .photo-status { font-size: 14px; font-weight: 700; color: #059669; }
-    .photo-uri { font-size: 11px; color: #6b7280; margin-top: 4px; }
-    .btn-remove { margin-top: 8px; padding: 4px 8px; background-color: #fee2e2; border-radius: 4px; }
-    .btn-remove-text { color: #991b1b; font-size: 11px; font-weight: 600; }
-
-    .error-msg { color: #dc2626; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
-
+    .btn-remove-text {
+      color: #4b5563;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .error-msg {
+      color: #b91c1c;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
     .btn-submit {
-      background-color: #2563eb;
-      padding: 14px;
-      border-radius: 8px;
+      background-color: #111827;
+      padding: 15px;
+      border-radius: 10px;
       align-items: center;
     }
-    .btn-submit-text { color: #ffffff; font-weight: 700; font-size: 15px; }
+    .btn-submit-text {
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .helper {
+      font-size: 12px;
+      color: #5f646d;
+      text-align: center;
+      margin-top: 10px;
+      line-height: 17px;
+    }
   `,
 })
 export class CaptureComponent {
-  @Output() reportCreated = new EventEmitter<string>();
-
   readonly noteText = signal<string>('');
   readonly photoUri = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
+  readonly photoSrc = computed<{ uri: string } | undefined>(() => {
+    const uri = this.photoUri();
+    return uri ? { uri } : undefined;
+  });
 
   constructor(
     private repo: ReportsRepository,
-    private sync: SyncService
+    private sync: SyncService,
+    private nav: NativeNavigation
   ) {}
+
+  cancel() {
+    void this.nav.back();
+  }
 
   async pickImage() {
     try {
@@ -160,10 +247,10 @@ export class CaptureComponent {
       });
       if (!res.canceled && res.assets && res.assets.length > 0) {
         this.photoUri.set(res.assets[0].uri);
+        this.errorMessage.set(null);
       }
     } catch (e: any) {
-      console.warn('Photo picker fallback:', e);
-      this.photoUri.set('file://mock-photo-picker-sample.jpg');
+      this.errorMessage.set('Could not open the photo library on this device.');
     }
   }
 
@@ -175,17 +262,17 @@ export class CaptureComponent {
       });
       if (!res.canceled && res.assets && res.assets.length > 0) {
         this.photoUri.set(res.assets[0].uri);
+        this.errorMessage.set(null);
       }
     } catch (e: any) {
-      console.warn('Camera fallback:', e);
-      this.photoUri.set('file://mock-camera-captured.jpg');
+      this.errorMessage.set('Could not open the camera on this device.');
     }
   }
 
   async saveAndSync() {
     const text = this.noteText().trim();
     if (!text) {
-      this.errorMessage.set('Please enter an inspection note before saving.');
+      this.errorMessage.set('Add a note about what you found before saving.');
       return;
     }
 
@@ -205,7 +292,7 @@ export class CaptureComponent {
     this.noteText.set('');
     this.photoUri.set(null);
 
-    this.reportCreated.emit(reportId);
-    await this.sync.drain();
+    void this.nav.back();
+    void this.sync.drain();
   }
 }

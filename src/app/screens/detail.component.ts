@@ -1,59 +1,70 @@
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { Component, Input, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Pressable, ScrollView, Text, TextInput, View } from '@ng-native/components';
+import { Image, Pressable, ScrollView, Text, TextInput, View } from '@ng-native/components';
+import { NativeHeader } from '@ng-native/router';
 import { ReportsRepository } from '../data/reports.repo';
 import { SyncService } from '../sync/sync.service';
 import { InspectionReport } from '../data/models';
+import { statusLabel } from '../data/status';
+import { OfflineStrip } from './offline-strip';
 
 @Component({
   selector: 'app-detail',
-  imports: [CommonModule, Pressable, ScrollView, Text, TextInput, View],
+  imports: [CommonModule, Image, NativeHeader, OfflineStrip, Pressable, ScrollView, Text, TextInput, View],
   template: `
-    <view class="container">
-      <view class="header">
-        <pressable class="btn-back" (press)="backPressed.emit()">
-          <text class="back-text">← Back to List</text>
-        </pressable>
-        <text class="title">Inspection Detail</text>
-      </view>
+    <native-header title="Inspection" />
 
+    <app-offline-strip />
+
+    <view class="container">
       @if (report()) {
         <scroll-view class="detail-scroll">
           <view class="card">
             <view class="card-row">
-              <text class="id-text">ID: {{ report()?.id }}</text>
               <text [class]="'badge badge-' + report()?.status">
-                {{ report()?.status | uppercase }}
+                {{ label(report()?.status) }}
               </text>
+              <text class="date-text">{{ report()?.created_at | date: 'MMM d, y, HH:mm' }}</text>
             </view>
 
-            <text class="label">Created Date:</text>
-            <text class="val-text">{{ report()?.created_at | date: 'medium' }}</text>
-
-            <text class="label">Original Note:</text>
+            <text class="label">Note</text>
             <text class="val-note">{{ report()?.note }}</text>
 
             @if (report()?.photo_path) {
-              <text class="label">Attached Photo:</text>
-              <text class="val-photo">{{ report()?.photo_path }}</text>
+              <text class="label">Photo</text>
+              <image
+                class="photo"
+                [source]="photoSrc()"
+                resizeMode="cover"
+              />
             }
 
-            @if (report()?.error) {
-              <view class="error-box">
-                <text class="error-title">Sync Error Log:</text>
-                <text class="error-text">{{ report()?.error }}</text>
-                <pressable class="btn-retry" (press)="retrySync()">
-                  <text class="retry-text">⚡ Manual Retry Sync</text>
-                </pressable>
-              </view>
-            }
+            <text class="ref-text">Ref {{ report()?.id?.slice(0, 8) }}</text>
           </view>
+
+          @if (report()?.error) {
+            <view class="error-box">
+              <text class="error-title">Could not send this report</text>
+              <text class="error-text">{{ report()?.error }}</text>
+              <pressable
+                class="btn-retry"
+                (press)="retrySync()"
+                accessibilityRole="button"
+                accessibilityLabel="Try sending again"
+              >
+                <text class="retry-text">Try again</text>
+              </pressable>
+            </view>
+          }
 
           @if (report()?.report_json) {
             <view class="card report-card">
-              <text class="card-title">Structured Gemini AI Report</text>
+              <view class="report-head">
+                <text class="card-title">Report</text>
+                <text class="chip-auto">Auto-generated</text>
+              </view>
 
-              <text class="label">Title (Editable):</text>
+              <text class="label">Title</text>
               <text-input
                 class="edit-input"
                 [value]="editTitle()"
@@ -62,16 +73,16 @@ import { InspectionReport } from '../data/models';
 
               <view class="meta-row">
                 <view class="meta-item">
-                  <text class="meta-label">Severity:</text>
-                  <text class="meta-val">{{ report()?.report_json?.severity | uppercase }}</text>
+                  <text class="meta-label">Severity</text>
+                  <text class="meta-val">{{ report()?.report_json?.severity | titlecase }}</text>
                 </view>
                 <view class="meta-item">
-                  <text class="meta-label">Category:</text>
-                  <text class="meta-val">{{ report()?.report_json?.category | uppercase }}</text>
+                  <text class="meta-label">Category</text>
+                  <text class="meta-val">{{ report()?.report_json?.category | titlecase }}</text>
                 </view>
               </view>
 
-              <text class="label">AI Summary (Editable):</text>
+              <text class="label">Summary</text>
               <text-input
                 class="edit-input-multiline"
                 [value]="editSummary()"
@@ -80,18 +91,27 @@ import { InspectionReport } from '../data/models';
                 [numberOfLines]="3"
               />
 
-              <text class="label">Suggested Action:</text>
+              <text class="label">Recommended action</text>
               <text class="val-action">{{ report()?.report_json?.suggested_action }}</text>
 
-              <pressable class="btn-save" (press)="saveEdits()">
-                <text class="btn-save-text">Save Local Edits</text>
+              <pressable
+                class="btn-save"
+                (press)="saveEdits()"
+                accessibilityRole="button"
+                accessibilityLabel="Save changes"
+              >
+                <text class="btn-save-text">Save changes</text>
               </pressable>
+
+              @if (savedNotice()) {
+                <text class="saved-text">Saved on this device</text>
+              }
             </view>
           }
         </scroll-view>
       } @else {
         <view class="not-found">
-          <text class="not-found-text">Report ID not found.</text>
+          <text class="not-found-text">This report is no longer available.</text>
         </view>
       }
     </view>
@@ -102,26 +122,19 @@ import { InspectionReport } from '../data/models';
     }
     .container {
       flex: 1;
-      background-color: #f4f5f8;
+      background-color: #f6f6f7;
       padding: 16px;
     }
-    .header {
-      margin-bottom: 14px;
-    }
-    .btn-back {
-      padding: 6px 0;
-      margin-bottom: 8px;
-    }
-    .back-text { font-size: 14px; font-weight: 700; color: #2563eb; }
-    .title { font-size: 26px; font-weight: 800; color: #111827; }
 
-    .detail-scroll { flex: 1; }
+    .detail-scroll {
+      flex: 1;
+    }
     .card {
       background-color: #ffffff;
       padding: 16px;
-      border-radius: 10px;
+      border-radius: 12px;
       margin-bottom: 14px;
-      border: 1px solid #e5e7eb;
+      border: 1px solid #d8d8dd;
     }
     .card-row {
       flex-direction: row;
@@ -129,41 +142,194 @@ import { InspectionReport } from '../data/models';
       align-items: center;
       margin-bottom: 12px;
     }
-    .id-text { font-size: 12px; font-weight: 700; color: #6b7280; }
+    .date-text {
+      font-size: 12px;
+      color: #5f646d;
+    }
+    .ref-text {
+      font-size: 11px;
+      color: #5f646d;
+      margin-top: 12px;
+    }
 
-    .badge { font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px; }
-    .badge-queued { background-color: #fef3c7; color: #92400e; }
-    .badge-syncing { background-color: #dbeafe; color: #1e40af; }
-    .badge-synced { background-color: #d1fae5; color: #065f46; }
-    .badge-failed { background-color: #fee2e2; color: #991b1b; }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 10px;
+    }
+    .badge-queued {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+    .badge-syncing {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+    .badge-synced {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+    .badge-failed {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+    .badge-draft {
+      background-color: #f3f4f6;
+      color: #4b5563;
+    }
 
-    .label { font-size: 13px; font-weight: 700; color: #4b5563; margin-top: 10px; margin-bottom: 4px; }
-    .val-text { font-size: 14px; color: #111827; }
-    .val-note { font-size: 15px; color: #1f2937; font-weight: 500; background-color: #f9fafb; padding: 10px; border-radius: 6px; }
-    .val-photo { font-size: 12px; color: #059669; font-weight: 600; }
-    .val-action { font-size: 14px; color: #111827; background-color: #fef3c7; padding: 10px; border-radius: 6px; }
+    .label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #5f646d;
+      margin-top: 12px;
+      margin-bottom: 6px;
+    }
+    .val-note {
+      font-size: 15px;
+      color: #111827;
+      font-weight: 500;
+      background-color: #f9fafb;
+      padding: 12px;
+      border-radius: 8px;
+      line-height: 21px;
+    }
+    .photo {
+      width: 100%;
+      height: 180px;
+      border-radius: 8px;
+    }
+    .val-action {
+      font-size: 14px;
+      color: #111827;
+      background-color: #f9fafb;
+      padding: 12px;
+      border-radius: 8px;
+      line-height: 20px;
+    }
 
-    .error-box { background-color: #fee2e2; padding: 12px; border-radius: 8px; margin-top: 14px; }
-    .error-title { font-size: 13px; font-weight: 700; color: #991b1b; }
-    .error-text { font-size: 12px; color: #7f1d1d; margin-top: 2px; margin-bottom: 8px; }
-    .btn-retry { background-color: #dc2626; padding: 8px; border-radius: 6px; align-items: center; }
-    .retry-text { color: #ffffff; font-weight: 700; font-size: 12px; }
+    .error-box {
+      background-color: #fef2f2;
+      padding: 14px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      border: 1px solid #fecaca;
+    }
+    .error-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #991b1b;
+    }
+    .error-text {
+      font-size: 12px;
+      color: #7f1d1d;
+      margin-top: 4px;
+      margin-bottom: 10px;
+    }
+    .btn-retry {
+      background-color: #111827;
+      padding: 10px;
+      border-radius: 8px;
+      align-items: center;
+    }
+    .retry-text {
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 13px;
+    }
 
-    .report-card { border-left: 4px solid #2563eb; }
-    .card-title { font-size: 17px; font-weight: 800; color: #111827; margin-bottom: 8px; }
+    .report-card {
+      border-left-width: 3px;
+      border-left-color: #111827;
+    }
+    .report-head {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .chip-auto {
+      font-size: 11px;
+      font-weight: 600;
+      color: #4b5563;
+      background-color: #ececef;
+      padding: 3px 9px;
+      border-radius: 10px;
+    }
 
-    .edit-input { background-color: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; padding: 10px; font-size: 14px; color: #111827; }
-    .edit-input-multiline { background-color: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; padding: 10px; font-size: 14px; color: #111827; min-height: 70px; }
+    .edit-input {
+      background-color: #f9fafb;
+      border: 1px solid #71767f;
+      border-radius: 8px;
+      padding: 11px;
+      font-size: 14px;
+      color: #111827;
+    }
+    .edit-input-multiline {
+      background-color: #f9fafb;
+      border: 1px solid #71767f;
+      border-radius: 8px;
+      padding: 11px;
+      font-size: 14px;
+      color: #111827;
+      min-height: 76px;
+    }
 
-    .meta-row { flex-direction: row; gap: 16px; margin-top: 8px; }
-    .meta-item { flex: 1; background-color: #f3f4f6; padding: 8px; border-radius: 6px; }
-    .meta-label { font-size: 11px; font-weight: 700; color: #6b7280; }
-    .meta-val { font-size: 13px; font-weight: 800; color: #1f2937; margin-top: 2px; }
+    .meta-row {
+      flex-direction: row;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .meta-item {
+      flex: 1;
+      background-color: #f9fafb;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #d8d8dd;
+    }
+    .meta-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #5f646d;
+    }
+    .meta-val {
+      font-size: 14px;
+      font-weight: 700;
+      color: #111827;
+      margin-top: 2px;
+    }
 
-    .btn-save { background-color: #059669; padding: 12px; border-radius: 8px; align-items: center; margin-top: 16px; }
-    .btn-save-text { color: #ffffff; font-weight: 700; font-size: 14px; }
-    .not-found { padding: 40px; align-items: center; }
-    .not-found-text { font-size: 16px; color: #6b7280; }
+    .btn-save {
+      background-color: #111827;
+      padding: 13px;
+      border-radius: 10px;
+      align-items: center;
+      margin-top: 16px;
+    }
+    .btn-save-text {
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .saved-text {
+      font-size: 12px;
+      color: #047857;
+      text-align: center;
+      margin-top: 8px;
+    }
+    .not-found {
+      padding: 40px;
+      align-items: center;
+    }
+    .not-found-text {
+      font-size: 15px;
+      color: #5f646d;
+    }
   `,
 })
 export class DetailComponent {
@@ -173,11 +339,16 @@ export class DetailComponent {
     }
   }
 
-  @Output() backPressed = new EventEmitter<void>();
-
   readonly report = signal<InspectionReport | null>(null);
   readonly editTitle = signal<string>('');
   readonly editSummary = signal<string>('');
+  readonly savedNotice = signal<boolean>(false);
+  readonly photoSrc = computed<{ uri: string } | undefined>(() => {
+    const uri = this.report()?.photo_path;
+    return uri ? { uri } : undefined;
+  });
+
+  readonly label = statusLabel;
 
   constructor(
     private repo: ReportsRepository,
@@ -206,6 +377,8 @@ export class DetailComponent {
       };
       await this.repo.update(updated);
       this.report.set(updated);
+      this.savedNotice.set(true);
+      setTimeout(() => this.savedNotice.set(false), 2000);
     }
   }
 
