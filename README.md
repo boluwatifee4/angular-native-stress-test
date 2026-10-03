@@ -12,6 +12,18 @@ An offline-first industrial inspection reporter built to stress-test **Angular N
 
 ---
 
+## Demo Video & Chaos Lab Walkthrough
+
+<!-- UPLOAD YOUR DEMO VIDEO: Replace the src URL below with your video link or GitHub upload asset -->
+<div align="center">
+  <video src="YOUR_VIDEO_URL_HERE.mp4" controls width="100%">
+    Your browser does not support the video tag.
+  </video>
+  <p><em>60-Second Demo: Offline capture, automatic reconnect, Chaos Lab 429 backoff, and 500-row SQLite scroll benchmark.</em></p>
+</div>
+
+---
+
 ## Technical Scoreboard
 
 | Metric | Measured Value | Implementation Note |
