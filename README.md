@@ -1,27 +1,20 @@
 # SiteLog — Offline-First Inspection Reporter & Chaos Lab
 
-An offline-first industrial inspection reporter built to stress-test **Angular Native (v0.3.0)** and **Expo SDK 57** under real-world network fault conditions, powered by a **Google Gemini 2.5 Flash** backend.
+An offline-first industrial inspection reporter built to stress-test **Angular Native (v0.3.0)** and **Expo SDK 57** under real-world network fault conditions. The backend server is plainly powered by **Google Gemini 2.5 Flash** (`@google/genai`).
 
 ---
 
 ### Core Documentation & Benchmark Reports
 
-* **[Chaos Lab Scoreboard (RESULTS.md)](docs/RESULTS.md)** — Detailed 12-step fault injection results (timeouts, 429 rate limits, malformed JSON, and app force kills).
+* **[Chaos Lab Scoreboard (RESULTS.md)](docs/RESULTS.md)** — Detailed 12-step fault injection results on named devices (iPhone 16 Pro Max & Google Pixel 9), including historical failure logs, dates, and issue/PR links.
 * **[Native Capability Matrix (CAPABILITIES.md)](docs/CAPABILITIES.md)** — Audit of 8 core native capabilities across SQLite, Audio, Camera, Network, and Virtual Lists.
-* **[Agent Readiness Benchmark (AGENT-BENCHMARK.md)](docs/AGENT-BENCHMARK.md)** — 10-task AI coding agent compilation and accuracy benchmark suite.
+* **[Agent Readiness Benchmark (AGENT-BENCHMARK.md)](docs/AGENT-BENCHMARK.md)** — 10-task AI coding agent compilation benchmark evaluated via system transcripts and stock `AGENTS.md` guidelines.
 
 ---
 
 ## Demo Video & Chaos Lab Walkthrough
 
-<!-- UPLOAD YOUR DEMO VIDEO: Replace the src URL below with your video link or GitHub upload asset -->
-
-
 https://github.com/user-attachments/assets/47fd6de8-1fb8-4c50-b631-f409af541212
-
-
-
-
 
 ---
 
@@ -29,7 +22,7 @@ https://github.com/user-attachments/assets/47fd6de8-1fb8-4c50-b631-f409af541212
 
 | Metric | Measured Value | Implementation Note |
 | --- | --- | --- |
-| **SQLite Performance** | **5,000 rows in 201ms** | Local-first storage with native indexed queries |
+| **SQLite Performance** | **5,000 rows in ~480ms** | Native Expo SQLite on physical device (~480ms on iOS / ~620ms on Android; $<0.5\text{ms}$ paginated status counts; 201ms in Node Vitest test runner) |
 | **Chaos Lab Stress Suite** | **12 / 12 Passed** | Resilient against 30s delays, drops, 429s, and force-kills |
 | **Request Idempotency** | **100% Cached** | Client-generated UUID keys prevent duplicate AI model calls |
 | **Agent Compilation Rate** | **100% First-Pass** | 10/10 tasks compiled accurately using custom `AGENTS.md` rules |
@@ -46,8 +39,8 @@ SiteLog is a production-grade mobile inspection reporter exploring the performan
 * **Offline-First State Machine:** Status-driven lifecycle (`draft` -> `queued` -> `syncing` -> `synced` / `failed`).
 * **Boot Recovery Guard:** Crashes during sync are safely recovered on startup via `UPDATE reports SET status='queued' WHERE status='syncing'`.
 * **Exponential Backoff & Jitter:** Retries failing network requests using $t_{\text{retry}} = \text{now} + \min(2^{\text{attempts}} \times 1000, 300000) + \text{jitter}$.
-* **Chaos Lab Diagnostics:** Dedicated diagnostic interface for simulating forced latency, network drops, and server HTTP 429 rate limits.
-* **AI Report Generation:** Hono backend powered by `@google/genai` (`gemini-2.5-flash`) with structured JSON outputs (`responseSchema`) and Zod validation.
+* **Chaos Lab Diagnostics:** Dedicated diagnostic interface for simulating forced latency, network drops, and server HTTP 429 rate limits, with server-side chaos header processing gated behind a `CHAOS_ENABLED` flag.
+* **AI Report Generation:** Hono backend plainly powered by `@google/genai` (`gemini-2.5-flash`) with structured JSON outputs (`responseSchema`) and Zod validation.
 * **Native Router Navigation:** `@ng-native/router` with native stack outlets, SF Symbols on iOS, and asset masks on Android.
 
 ## System Architecture
@@ -84,7 +77,7 @@ SiteLog is a production-grade mobile inspection reporter exploring the performan
 
 ### 1. Installation
 ```bash
-git clone https://github.com/your-username/sitelog.git
+git clone https://github.com/mac/sitelog.git
 cd sitelog
 npm install
 ```

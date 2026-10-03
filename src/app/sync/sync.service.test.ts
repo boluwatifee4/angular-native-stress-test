@@ -3,9 +3,11 @@ import { SyncService } from './sync.service';
 import { ReportsRepository } from '../data/reports.repo';
 import { DatabaseService } from '../data/db.service';
 import { NetworkService } from './network';
-import { ApiClient } from './api.client';
+import { ApiClient, ReportPayload } from './api.client';
 import { ChaosService } from '../chaos/chaos.service';
-import { InspectionReport } from '../data/models';
+import { InspectionReport, StructuredReport } from '../data/models';
+
+import { FakeApiClient } from './fake-api.client';
 
 describe('SyncEngine Architecture Tests', () => {
   let syncService: SyncService;
@@ -25,7 +27,7 @@ describe('SyncEngine Architecture Tests', () => {
     network = new NetworkService();
     network.setOnline(true);
 
-    apiClient = new ApiClient(chaos);
+    apiClient = new FakeApiClient(chaos);
     syncService = new SyncService(repo, network, apiClient, chaos);
   });
 

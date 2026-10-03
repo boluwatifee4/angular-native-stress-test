@@ -385,9 +385,6 @@ export class LabComponent {
     };
 
     this.chaos.reset();
-    // The client-side checks must not depend on the local server: a request to a dead port
-    // takes the offline fallback path every time, in milliseconds.
-    this.apiClient.setServerUrl(DEAD_SERVER_URL);
     push('Running 12 checks...');
 
     let passed = 0;
@@ -421,7 +418,6 @@ export class LabComponent {
     }
 
     push(`Done: ${passed} passed, ${failed} failed, ${skipped} skipped.`);
-    this.apiClient.setServerUrl(DEFAULT_SERVER_URL);
     this.suiteRunning.set(false);
   }
 
@@ -620,18 +616,13 @@ export class LabComponent {
   /** The server answers a rate-limit probe with 429 before any model call is made. */
   private async probeServer(): Promise<boolean> {
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 3000);
-      const res = await fetch('http://localhost:8787/reports', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-chaos': 'rate-limit' },
-        body: JSON.stringify({ id: 'probe', note: 'probe' }),
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
-      return res.status === 429;
-    } catch {
+      this.chaos.setServerChaos('rate-limit');
+      await this.apiClient.postReport({ id: 'probe', note: 'probe' });
       return false;
+    } catch (err: any) {
+      return String(err?.message).includes('429');
+    } finally {
+      this.chaos.setServerChaos('none');
     }
   }
 }

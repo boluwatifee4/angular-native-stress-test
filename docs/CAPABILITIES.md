@@ -5,6 +5,7 @@
 * **Expo SDK:** 57.0.26
 * **Angular Native:** 0.3.0
 * **React Native:** 0.86.3
+* **Backend AI Model:** Google Gemini 2.5 Flash (`@google/genai`)
 * **Date Evaluated:** Oct 3, 2026
 
 ---
@@ -21,6 +22,7 @@
 | **Native Stack, Tabs & Deep Linking** | **Works** | Provided natively by `@ng-native/router` via `provideNativeRouter()` and `<native-stack-outlet />`. Supports Android back button navigation and `sitelog://` deep links. |
 | **Signal Forms & Validation** | **Works** | `@angular/forms` with Angular Signals (`signal()`, `computed()`) provides validated form binding. |
 | **Virtual List** | **Works** | `<virtual-list>` from `@ng-native/components` recycles rows over signal windows (`reports.window()`). |
+| **Switch Component & Track Colors** | **Partial** | `<switch>` works with boolean binding. Custom `[trackColor]` throws on Android due to `@ng-native/fabric` property regex mismatch on `trackColorForTrue` / `trackColorForFalse` ([ng-native #42](https://github.com/ng-native/ng-native/issues/42)). Leaving `[trackColor]` unbound uses native platform switch styling without error. |
 
 ---
 

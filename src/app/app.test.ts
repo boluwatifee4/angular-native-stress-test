@@ -4,10 +4,15 @@ import { NativeNavigation, provideNativeRouter } from '@ng-native/router';
 import { cleanup, fireEvent, render, screen, userEvent, waitFor } from '@ng-native/testing';
 import { App } from './app';
 import { routerFeatures, routes } from './app.routes';
+import { ApiClient } from './sync/api.client';
+import { FakeApiClient } from './sync/fake-api.client';
 
 async function renderApp() {
   const result = await render(App, {
-    providers: [provideNativeRouter(routes, ...routerFeatures())],
+    providers: [
+      provideNativeRouter(routes, ...routerFeatures()),
+      { provide: ApiClient, useClass: FakeApiClient },
+    ],
   });
   return {
     fabric: result.fabric,
