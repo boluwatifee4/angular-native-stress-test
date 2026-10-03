@@ -37,7 +37,7 @@ const DEAD_SERVER_URL = 'http://localhost:9';
               <text class="label">Simulate offline</text>
               <switch
                 [checked]="chaos.offline()"
-                (checkedChange)="chaos.setOffline($event)"
+                (checkedChange)="toggleOffline($event)"
                 accessibilityLabel="Simulate offline"
               />
             </view>
@@ -350,6 +350,13 @@ export class LabComponent {
     public sync: SyncService,
     private apiClient: ApiClient
   ) {}
+
+  async toggleOffline(offline: boolean) {
+    this.chaos.setOffline(offline);
+    if (!offline) {
+      await this.sync.drain();
+    }
+  }
 
   async seedDatabase(count: number) {
     const start = Date.now();

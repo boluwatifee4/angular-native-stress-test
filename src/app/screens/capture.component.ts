@@ -39,7 +39,7 @@ import { InspectionReport } from '../data/models';
         <text class="subtitle">Record what you found on site.</text>
       </view>
 
-      <scroll-view class="form-scroll">
+      <scroll-view class="form-scroll" keyboardShouldPersistTaps="handled">
         <view class="form-card">
           <text class="label">What did you find?</text>
           <text-input
@@ -269,13 +269,18 @@ export class CaptureComponent {
     }
   }
 
+  readonly isSaving = signal<boolean>(false);
+
   async saveAndSync() {
+    if (this.isSaving()) return;
+
     const text = this.noteText().trim();
     if (!text) {
       this.errorMessage.set('Add a note about what you found before saving.');
       return;
     }
 
+    this.isSaving.set(true);
     this.errorMessage.set(null);
 
     const reportId = `report-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
@@ -288,11 +293,15 @@ export class CaptureComponent {
       attempts: 0,
     };
 
-    await this.repo.insert(newReport);
-    this.noteText.set('');
-    this.photoUri.set(null);
+    try {
+      await this.repo.insert(newReport);
+      this.noteText.set('');
+      this.photoUri.set(null);
 
-    void this.nav.back();
-    void this.sync.drain();
+      void this.nav.back();
+      void this.sync.drain();
+    } finally {
+      this.isSaving.set(false);
+    }
   }
 }

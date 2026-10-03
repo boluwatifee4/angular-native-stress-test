@@ -19,7 +19,7 @@ import { OfflineStrip } from './offline-strip';
     <view class="container">
       <tab-safe-area-view [edges]="['bottom']" class="tab-body">
         @if (report()) {
-          <scroll-view class="detail-scroll">
+          <scroll-view class="detail-scroll" keyboardShouldPersistTaps="handled">
             <view class="card">
               <view class="card-row">
                 <text [class]="'badge badge-' + report()?.status">
