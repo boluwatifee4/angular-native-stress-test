@@ -1,11 +1,15 @@
+import { describe, expect, it } from 'vitest';
 import { render, screen, userEvent } from '@ng-native/testing';
-import { expect, test } from 'vitest';
-import { App } from './app.ts';
+import { App } from './app';
 
-test('counts taps', async () => {
-  await render(App);
+describe('App component integration test', () => {
+  it('renders root header and navigation tabs', async () => {
+    await render(App);
 
-  await userEvent.setup().press(screen.getByRole('button', { name: 'Tapped 0 times' }));
-
-  expect(screen.getByText('Tapped 1 times')).toBeTruthy();
+    expect(screen.getByText('📋 SiteLog')).toBeDefined();
+    expect(screen.getByText('Reports')).toBeDefined();
+    expect(screen.getByText('Queue')).toBeDefined();
+    expect(screen.getByText('Chaos Lab')).toBeDefined();
+    expect(screen.getByText('Capture')).toBeDefined();
+  });
 });
