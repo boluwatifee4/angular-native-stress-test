@@ -33,11 +33,19 @@ const apiKey = process.env.GEMINI_API_KEY || 'mock-key-for-test';
 const ai = new GoogleGenAI({ apiKey });
 const seen = new Map<string, unknown>();
 let idempotencyHitCount = 0;
+let modelCallCount = 0;
 
-const app = new Hono();
+export function resetServerStats() {
+  seen.clear();
+  idempotencyHitCount = 0;
+  modelCallCount = 0;
+}
+
+export const app = new Hono();
 
 app.get('/stats', (c) => {
   return c.json({
+    modelCalls: modelCallCount,
     idempotencyHits: idempotencyHitCount,
     cachedReportsCount: seen.size,
   });
@@ -66,6 +74,9 @@ app.post('/reports', async (c) => {
     c.header('x-idempotent-hit', 'true');
     return c.json(seen.get(id));
   }
+
+  // Increment modelCallCount for new non-cached processing
+  modelCallCount++;
 
   // If mock key or test mode, return structured mock response
   if (process.env.MOCK_AI === 'true' || apiKey === 'mock-key-for-test') {

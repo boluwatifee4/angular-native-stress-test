@@ -25,7 +25,7 @@ https://github.com/user-attachments/assets/47fd6de8-1fb8-4c50-b631-f409af541212
 | **SQLite Performance** | **5,000 rows in ~480ms** | Native Expo SQLite on physical device (~480ms on iOS / ~620ms on Android; $<0.5\text{ms}$ paginated status counts; 201ms in Node Vitest test runner) |
 | **Chaos Lab Stress Suite** | **12 / 12 Passed** | Resilient against 30s delays, drops, 429s, and force-kills |
 | **Idempotency Guard** | **0 Duplicate AI Calls** | Client-generated UUID keys return cached server responses on retries |
-| **Agent Compilation Rate** | **100% First-Pass** | 10/10 tasks compiled accurately using custom `AGENTS.md` rules |
+| **Agent Readiness Guide** | **Illustrative Comparison** | Qualitative guidance reference; unmeasured baseline vs guided primitives |
 
 ---
 
@@ -39,7 +39,7 @@ SiteLog is a production-grade mobile inspection reporter exploring the performan
 * **Offline-First State Machine:** Status-driven lifecycle (`draft` -> `queued` -> `syncing` -> `synced` / `failed`).
 * **Boot Recovery Guard:** Crashes during sync are safely recovered on startup via `UPDATE reports SET status='queued' WHERE status='syncing'`.
 * **Exponential Backoff & Jitter:** Retries failing network requests using $t_{\text{retry}} = \text{now} + \min(2^{\text{attempts}} \times 1000, 300000) + \text{jitter}$.
-* **Chaos Lab Diagnostics:** Dedicated diagnostic interface for simulating forced latency, network drops, and server HTTP 429 rate limits, with server-side chaos header processing gated behind a `CHAOS_ENABLED` flag.
+* **Chaos Lab Diagnostics:** Dedicated diagnostic interface for simulating forced latency, network drops, and server HTTP 429 rate limits, with server-side chaos header processing gated behind an explicit `CHAOS_ENABLED=true` flag.
 * **AI Report Generation:** Hono backend plainly powered by `@google/genai` (`gemini-2.5-flash`) with structured JSON outputs (`responseSchema`) and Zod validation.
 * **Native Router Navigation:** `@ng-native/router` with native stack outlets, SF Symbols on iOS, and asset masks on Android.
 
@@ -86,7 +86,7 @@ npm install
 ```bash
 cd server
 npm install
-GEMINI_API_KEY="your_api_key" npm run dev
+CHAOS_ENABLED=true GEMINI_API_KEY="your_api_key" npm run dev
 ```
 *(If no API key is set, the server automatically defaults to structured mock responses for offline testing).*
 
