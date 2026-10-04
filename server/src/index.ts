@@ -32,11 +32,19 @@ const geminiSchema: Schema = {
 const apiKey = process.env.GEMINI_API_KEY || 'mock-key-for-test';
 const ai = new GoogleGenAI({ apiKey });
 const seen = new Map<string, unknown>();
+let idempotencyHitCount = 0;
 
 const app = new Hono();
 
+app.get('/stats', (c) => {
+  return c.json({
+    idempotencyHits: idempotencyHitCount,
+    cachedReportsCount: seen.size,
+  });
+});
+
 app.post('/reports', async (c) => {
-  const chaosEnabled = process.env.CHAOS_ENABLED !== 'false';
+  const chaosEnabled = process.env.CHAOS_ENABLED === 'true';
   if (chaosEnabled) {
     const chaos = c.req.header('x-chaos');
     if (chaos === 'timeout') await new Promise((r) => setTimeout(r, 30_000));
@@ -53,7 +61,9 @@ app.post('/reports', async (c) => {
 
   // Idempotency check: Return cached report if already processed
   if (seen.has(id)) {
-    console.log(`[Idempotency hit] Returning existing report for id: ${id}`);
+    idempotencyHitCount++;
+    console.log(`[Idempotency hit #${idempotencyHitCount}] Returning existing report for id: ${id}`);
+    c.header('x-idempotent-hit', 'true');
     return c.json(seen.get(id));
   }
 

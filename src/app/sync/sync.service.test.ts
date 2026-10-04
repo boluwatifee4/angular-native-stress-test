@@ -124,4 +124,16 @@ describe('SyncEngine Architecture Tests', () => {
     expect(result?.status).toBe('synced');
     expect(result?.attempts).toBe(0);
   });
+
+  it('guarantees idempotency when posting reports with identical UUIDs', async () => {
+    const payload: ReportPayload = {
+      id: 'idempotency-test-id-123',
+      note: 'Idempotent report note',
+    };
+    const res1 = await apiClient.postReport(payload);
+    const res2 = await apiClient.postReport(payload);
+
+    expect(res1).toEqual(res2);
+    expect(res1.title).toBe(res2.title);
+  });
 });

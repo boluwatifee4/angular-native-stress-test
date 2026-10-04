@@ -16,7 +16,10 @@ export const DEFAULT_SERVER_URL = 'http://localhost:8787/reports';
 export class ApiClient {
   private serverUrl = DEFAULT_SERVER_URL;
 
-  constructor(protected chaos: ChaosService) {}
+  constructor(
+    protected chaos: ChaosService,
+    protected fetchFn: typeof fetch = (url, init) => globalThis.fetch(url, init)
+  ) {}
 
   setServerUrl(url: string) {
     this.serverUrl = url;
@@ -55,7 +58,7 @@ export class ApiClient {
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(this.serverUrl, {
+      const response = await this.fetchFn(this.serverUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload),
