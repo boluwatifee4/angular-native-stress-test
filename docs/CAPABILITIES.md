@@ -22,7 +22,7 @@
 | **Native Stack, Tabs & Deep Linking** | **Works** | Provided natively by `@ng-native/router` via `provideNativeRouter()` and `<native-stack-outlet />`. Supports Android back button navigation and `sitelog://` deep links. |
 | **Signal Forms & Validation** | **Works** | `@angular/forms` with Angular Signals (`signal()`, `computed()`) provides validated form binding. |
 | **Virtual List** | **Works** | `<virtual-list>` from `@ng-native/components` recycles rows over signal windows (`reports.window()`). |
-| **Switch Component & Track Colors** | **Partial** | `<switch>` works with boolean binding. Custom `[trackColor]` throws on Android due to `@ng-native/fabric` property regex mismatch on `trackColorForTrue` / `trackColorForFalse` ([ng-native #523](https://github.com/ng-native/ng-native/issues/523), fix pending in [PR #524](https://github.com/ng-native/ng-native/pull/524)). Leaving `[trackColor]` unbound uses native platform switch styling without error. |
+| **Switch Component & Track Colors** | **Partial** | `<switch>` works with boolean binding. Custom `[trackColor]` throws on Android due to `@ng-native/fabric` property regex mismatch on `trackColorForTrue` / `trackColorForFalse` ([ng-native #523](https://github.com/ng-native/ng-native/issues/523), fixed in [PR #524](https://github.com/ng-native/ng-native/pull/524), merged to `main` and awaiting release). Leaving `[trackColor]` unbound uses native platform switch styling without error. |
 
 ---
 
