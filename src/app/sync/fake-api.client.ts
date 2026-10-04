@@ -10,38 +10,41 @@ export class FakeApiClient extends ApiClient {
   }
 
   override async postReport(payload: ReportPayload, timeoutMs = 20000): Promise<StructuredReport> {
-    if (this.chaos.offline()) {
-      throw new Error('Network error: syncing is turned off from Diagnostics');
-    }
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+        const headers = (init?.headers as Record<string, string>) || {};
+        const chaosHeader = headers['x-chaos'];
 
-    const latency = this.chaos.latencyMs();
-    if (latency > 0) {
-      await new Promise((resolve) => setTimeout(resolve, latency));
-    }
+        if (chaosHeader === 'rate-limit') {
+          return new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429 });
+        }
+        if (chaosHeader === 'timeout') {
+          await new Promise((resolve) => setTimeout(resolve, timeoutMs + 100));
+          const err = new Error('The operation was aborted.');
+          err.name = 'AbortError';
+          throw err;
+        }
+        if (chaosHeader === 'malformed') {
+          return new Response(JSON.stringify({ bad: true }), { status: 200 });
+        }
 
-    const remainingFails = this.chaos.failNext();
-    if (remainingFails > 0) {
-      this.chaos.setFailNext(remainingFails - 1);
-      throw new Error('Simulated network connection drop (Diagnostics)');
-    }
+        const bodyObj = JSON.parse((init?.body as string) || '{}');
+        return new Response(
+          JSON.stringify({
+            title: `Inspection: ${(bodyObj.note || '').slice(0, 40)}`,
+            severity: (bodyObj.note || '').toLowerCase().includes('crack') ? 'high' : 'medium',
+            category: 'safety',
+            summary: `Assessment for note: ${bodyObj.note}`,
+            suggested_action: 'Perform safety check.',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }) as typeof fetch;
 
-    const serverChaos = this.chaos.serverChaos();
-    if (serverChaos === 'rate-limit') {
-      throw new Error('HTTP 429: Rate limited by server');
+      return await super.postReport(payload, timeoutMs);
+    } finally {
+      globalThis.fetch = originalFetch;
     }
-    if (serverChaos === 'timeout') {
-      throw new Error(`Request timed out after ${timeoutMs}ms`);
-    }
-    if (serverChaos === 'malformed') {
-      throw new Error('Malformed JSON output from server');
-    }
-
-    return {
-      title: `Inspection: ${payload.note.slice(0, 40)}`,
-      severity: payload.note.toLowerCase().includes('crack') || payload.note.toLowerCase().includes('danger') ? 'high' : 'medium',
-      category: payload.note.toLowerCase().includes('concrete') || payload.note.toLowerCase().includes('wall') ? 'structural' : 'safety',
-      summary: `Automated assessment based on note: "${payload.note}".`,
-      suggested_action: 'Perform safety check.',
-    };
   }
 }

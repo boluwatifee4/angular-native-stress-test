@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, OnDestroy, signal } from '@angular/core';
 import { ReportsRepository } from '../data/reports.repo';
 import { NetworkService } from './network';
 import { ApiClient } from './api.client';
@@ -8,7 +8,7 @@ import { InspectionReport } from '../data/models';
 @Injectable({
   providedIn: 'root',
 })
-export class SyncService {
+export class SyncService implements OnDestroy {
   readonly isRunning = signal<boolean>(false);
   readonly lastDrainTime = signal<number | null>(null);
   private runningGuard = false;
@@ -32,6 +32,12 @@ export class SyncService {
         void this.drain();
       }
     }, 5000);
+  }
+
+  ngOnDestroy() {
+    if (this.autoRetryInterval) {
+      clearInterval(this.autoRetryInterval);
+    }
   }
 
   async drain(): Promise<void> {
@@ -79,12 +85,18 @@ export class SyncService {
         let photoBase64: string | undefined = undefined;
         if (candidate.photo_path) {
           try {
-            const FileSystem = await import('expo-file-system');
+            let FileSystem: any;
+            try {
+              FileSystem = await import('expo-file-system/legacy');
+            } catch {
+              FileSystem = await import('expo-file-system');
+            }
             photoBase64 = await FileSystem.readAsStringAsync(candidate.photo_path, {
               encoding: FileSystem.EncodingType.Base64,
             });
-          } catch (e) {
-            photoBase64 = 'MOCK_BASE64_IMAGE_DATA';
+          } catch (e: any) {
+            console.error(`[SyncEngine] Failed to read photo at path ${candidate.photo_path}:`, e);
+            throw new Error(`Photo read error: ${e?.message || e}`);
           }
         }
 

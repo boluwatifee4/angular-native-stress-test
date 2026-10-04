@@ -8,7 +8,7 @@ An offline-first industrial inspection reporter built to stress-test **Angular N
 
 * **[Chaos Lab Scoreboard (RESULTS.md)](docs/RESULTS.md)** — Detailed 12-step fault injection results on named devices (iPhone 16 Pro Max & Google Pixel 9), including historical failure logs, dates, and issue/PR links.
 * **[Native Capability Matrix (CAPABILITIES.md)](docs/CAPABILITIES.md)** — Audit of 8 core native capabilities across SQLite, Audio, Camera, Network, and Virtual Lists.
-* **[Agent Readiness Benchmark (AGENT-BENCHMARK.md)](docs/AGENT-BENCHMARK.md)** — 10-task AI coding agent compilation benchmark evaluated via system transcripts and stock `AGENTS.md` guidelines.
+* **[Agent Readiness & Developer Guide (AGENT-BENCHMARK.md)](docs/AGENT-BENCHMARK.md)** — Illustrative comparison and component primitives guide for building Angular Native apps with LLMs.
 
 ---
 
@@ -24,7 +24,7 @@ https://github.com/user-attachments/assets/47fd6de8-1fb8-4c50-b631-f409af541212
 | --- | --- | --- |
 | **SQLite Performance** | **5,000 rows in ~480ms** | Native Expo SQLite on physical device (~480ms on iOS / ~620ms on Android; $<0.5\text{ms}$ paginated status counts; 201ms in Node Vitest test runner) |
 | **Chaos Lab Stress Suite** | **12 / 12 Passed** | Resilient against 30s delays, drops, 429s, and force-kills |
-| **Request Idempotency** | **100% Cached** | Client-generated UUID keys prevent duplicate AI model calls |
+| **Idempotency Guard** | **0 Duplicate AI Calls** | Client-generated UUID keys return cached server responses on retries |
 | **Agent Compilation Rate** | **100% First-Pass** | 10/10 tasks compiled accurately using custom `AGENTS.md` rules |
 
 ---
@@ -77,8 +77,8 @@ SiteLog is a production-grade mobile inspection reporter exploring the performan
 
 ### 1. Installation
 ```bash
-git clone https://github.com/mac/sitelog.git
-cd sitelog
+git clone https://github.com/boluwatifee4/angular-native-stress-test.git
+cd angular-native-stress-test
 npm install
 ```
 

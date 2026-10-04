@@ -36,10 +36,13 @@ const seen = new Map<string, unknown>();
 const app = new Hono();
 
 app.post('/reports', async (c) => {
-  const chaos = c.req.header('x-chaos');
-  if (chaos === 'timeout') await new Promise((r) => setTimeout(r, 30_000));
-  if (chaos === 'rate-limit') return c.json({ error: 'rate_limited' }, 429);
-  if (chaos === 'malformed') return c.json({ bad: true });
+  const chaosEnabled = process.env.CHAOS_ENABLED !== 'false';
+  if (chaosEnabled) {
+    const chaos = c.req.header('x-chaos');
+    if (chaos === 'timeout') await new Promise((r) => setTimeout(r, 30_000));
+    if (chaos === 'rate-limit') return c.json({ error: 'rate_limited' }, 429);
+    if (chaos === 'malformed') return c.json({ bad: true });
+  }
 
   const body = await c.req.json();
   const { id, note, photoBase64 } = body;
